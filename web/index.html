@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador MIC-1 (Tanenbaum)</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="titulo-area">
+      <h1>Simulador MIC-1</h1>
+      <span class="subtitulo">Tanenbaum • MAC-1 &amp; Caches</span>
+    </div>
+
+    <div class="botoes">
+      <button id="btn-micro" class="btn btn-primario">Passo Micro</button>
+      <button id="btn-macro" class="btn btn-secundario">Passo Macro</button>
+      <button id="btn-executar" class="btn btn-claro">Executar</button>
+      <button id="btn-reset" class="btn btn-perigo">Resetar</button>
+    </div>
+
+    <div class="metricas">
+      <span>Micro: <strong id="cnt-micro">0</strong></span>
+      <span>Macro: <strong id="cnt-macro">0</strong></span>
+      <span id="badge-status" class="status">Pronto</span>
+    </div>
+  </header>
+
+  <main class="grade">
+    <!-- COLUNA PRINCIPAL: DIAGRAMA + PASSO ATUAL -->
+    <section class="card">
+      <div class="card-topo">
+        <h2>Microarquitetura</h2>
+        <div class="legenda">
+          <span><i class="ponto p-ativo"></i>Ativo</span>
+          <span><i class="ponto p-hit"></i>Cache Hit</span>
+          <span><i class="ponto p-miss"></i>Cache Miss</span>
+        </div>
+      </div>
+
+      <div class="svg-wrap">
+        <svg id="svg-mic1" viewBox="0 0 880 560" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="seta" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8" />
+            </marker>
+            <marker id="seta-ativa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb" />
+            </marker>
+          </defs>
+
+          <!-- 3 Zonas Principais -->
+          <rect x="8" y="8" width="446" height="444" rx="10" class="zona" />
+          <text x="20" y="26" class="zona-txt">CAMINHO DE DADOS</text>
+
+          <rect x="466" y="8" width="406" height="444" rx="10" class="zona" />
+          <text x="478" y="26" class="zona-txt">UNIDADE DE CONTROLE</text>
+
+          <rect x="8" y="464" width="864" height="88" rx="10" class="zona zona-mem" />
+          <text x="20" y="482" class="zona-txt">MEMÓRIA E CACHES (L1 SEPARADA + RAM)</text>
+
+          <!-- BARRAMENTOS DO CAMINHO DE DADOS -->
+          <path id="comp-BUS_A" d="M 204 162 L 204 196" class="bus" marker-end="url(#seta)" />
+          <path id="comp-BUS_B" d="M 304 162 L 304 196 M 304 240 L 304 256 L 132 256 L 132 218 L 116 218" class="bus" marker-end="url(#seta)" />
+          <path d="M 204 240 L 204 268" class="fio" marker-end="url(#seta)" />
+          <path d="M 114 290 L 154 290" class="fio" marker-end="url(#seta)" />
+          <path d="M 204 312 L 204 338" class="fio" marker-end="url(#seta)" />
+          <path d="M 304 240 L 304 338" class="fio" marker-end="url(#seta)" />
+          <path d="M 254 392 L 254 410" class="fio" marker-end="url(#seta)" />
+          <path id="comp-BUS_C" d="M 254 444 L 254 450 L 436 450 L 436 96 L 368 96 M 254 450 L 66 450 L 66 324" class="bus" marker-end="url(#seta)" />
+          <text x="358" y="444" class="bus-txt">Barramento C</text>
+
+          <!-- FIOS DA UNIDADE DE CONTROLE -->
+          <path d="M 318 365 L 484 388" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 604 60 L 642 60" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 692 84 L 692 108" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 692 154 L 692 180" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 642 132 L 542 132 L 542 84" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 692 250 L 692 276" class="fio-ctrl" marker-end="url(#seta)" />
+          <path id="comp-ADDR" d="M 848 276 L 848 60 L 744 60" class="fio-ctrl" marker-end="url(#seta)" />
+          <path d="M 578 358 L 578 344 L 474 344 L 474 48 L 642 48" class="fio-ctrl" marker-end="url(#seta)" />
+
+          <!-- FIOS DE MEMÓRIA -->
+          <path d="M 48 242 L 48 492" class="fio-mem" marker-end="url(#seta)" />
+          <path d="M 88 322 L 88 492" class="fio-mem" marker-end="url(#seta)" />
+          <path d="M 88 458 L 320 458 L 320 492" class="fio-mem" marker-end="url(#seta)" />
+          <path d="M 278 518 L 306 518 M 562 518 L 594 518" class="fio-mem" />
+
+          <!-- ==================== COMPONENTES CAMINHO DE DADOS ==================== -->
+          <g id="comp-BANCO_REGS" class="bloco">
+            <rect x="148" y="38" width="218" height="124" rx="8" />
+            <text x="257" y="57" class="b-tit">16 Registradores</text>
+            <text x="164" y="82" class="b-reg">PC: <tspan id="svg-pc">0</tspan></text>
+            <text x="268" y="82" class="b-reg">AC: <tspan id="svg-ac">0</tspan></text>
+            <text x="164" y="106" class="b-reg">SP: <tspan id="svg-sp">4096</tspan></text>
+            <text x="268" y="106" class="b-reg">IR: <tspan id="svg-ir">0x0000</tspan></text>
+            <text x="164" y="130" class="b-reg">TIR: <tspan id="svg-tir">0x0000</tspan></text>
+            <text x="268" y="130" class="b-reg">A: <tspan id="svg-regA">0</tspan></text>
+            <text x="257" y="152" class="b-sub">Constantes + Auxiliares B..F</text>
+          </g>
+
+          <g id="comp-MAR" class="bloco">
+            <rect x="20" y="196" width="94" height="46" rx="6" />
+            <text x="67" y="214" class="b-tit">MAR</text>
+            <text x="67" y="233" id="svg-mar" class="b-val">0x000</text>
+          </g>
+
+          <g id="comp-MBR" class="bloco">
+            <rect x="20" y="266" width="94" height="56" rx="6" />
+            <text x="67" y="286" class="b-tit">MBR</text>
+            <text x="67" y="308" id="svg-mbr" class="b-val">0x0000</text>
+          </g>
+
+          <g id="comp-LATCH_A" class="bloco">
+            <rect x="156" y="196" width="96" height="44" rx="6" />
+            <text x="204" y="214" class="b-tit">Latch A</text>
+            <text x="204" y="232" id="svg-latch-a" class="b-val">0</text>
+          </g>
+
+          <g id="comp-LATCH_B" class="bloco">
+            <rect x="256" y="196" width="96" height="44" rx="6" />
+            <text x="304" y="214" class="b-tit">Latch B</text>
+            <text x="304" y="232" id="svg-latch-b" class="b-val">0</text>
+          </g>
+
+          <g id="comp-AMUX" class="bloco">
+            <rect x="156" y="268" width="96" height="44" rx="6" />
+            <text x="204" y="286" class="b-tit">AMUX</text>
+            <text x="204" y="304" id="svg-amux" class="b-sub-val">Latch A</text>
+          </g>
+
+          <g id="comp-ULA" class="bloco">
+            <polygon points="168,338 340,338 314,392 194,392" />
+            <text x="254" y="357" class="b-tit">ULA</text>
+            <text x="254" y="373" id="svg-ula-op" class="b-sub-val">A = 0</text>
+            <text x="254" y="387" id="svg-ula-flags" class="b-sub">N=0  Z=0</text>
+          </g>
+
+          <g id="comp-DESLOCADOR" class="bloco">
+            <rect x="176" y="410" width="156" height="34" rx="6" />
+            <text x="254" y="425" class="b-tit">Deslocador</text>
+            <text x="254" y="439" id="svg-sh" class="b-sub">0</text>
+          </g>
+
+          <!-- ==================== COMPONENTES UNIDADE DE CONTROLE ==================== -->
+          <g id="comp-INCREMENTADOR" class="bloco">
+            <rect x="484" y="38" width="118" height="44" rx="6" />
+            <text x="543" y="56" class="b-tit">Incrementador</text>
+            <text x="543" y="73" id="svg-inc" class="b-sub-val">MPC + 1</text>
+          </g>
+
+          <g id="comp-MMUX" class="bloco">
+            <rect x="642" y="38" width="100" height="44" rx="6" />
+            <text x="692" y="56" class="b-tit">Mmux</text>
+            <text x="692" y="73" id="svg-mmux" class="b-sub-val">MPC + 1</text>
+          </g>
+
+          <g id="comp-MPC" class="bloco">
+            <rect x="642" y="108" width="100" height="46" rx="6" />
+            <text x="692" y="126" class="b-tit">MPC</text>
+            <text x="692" y="145" id="svg-mpc" class="b-val">0</text>
+          </g>
+
+          <g id="comp-ROM_CONTROLE" class="bloco">
+            <rect x="484" y="180" width="372" height="70" rx="8" />
+            <text x="670" y="200" class="b-tit">Memória de Controle (256 × 32)</text>
+            <text x="670" y="223" id="svg-micro-txt" class="b-code">mar := pc; rd;</text>
+            <text x="670" y="241" id="svg-micro-prox" class="b-sub">Próxima: MPC 0</text>
+          </g>
+
+          <g id="comp-MIR" class="bloco">
+            <rect x="484" y="276" width="372" height="62" rx="8" />
+            <text x="670" y="295" class="b-tit">MIR (32 bits)</text>
+            <text x="670" y="315" id="svg-mir-sinais" class="b-sub-val">MAR=1 RD=1 | B=PC</text>
+            <text x="670" y="331" id="svg-mir-hex" class="b-sub">0x00000000</text>
+          </g>
+
+          <g id="comp-LOGICA_SEQ" class="bloco">
+            <rect x="484" y="360" width="372" height="58" rx="8" />
+            <text x="670" y="380" class="b-tit">Lógica de Microssequenciamento</text>
+            <text x="670" y="402" id="svg-seq" class="b-sub-val">COND: Não desvia → MPC + 1</text>
+          </g>
+
+          <!-- ==================== MEMÓRIA E CACHES ==================== -->
+          <g id="comp-ICACHE" class="bloco bloco-cache">
+            <rect x="20" y="492" width="258" height="50" rx="8" />
+            <text x="149" y="511" class="b-tit">I-Cache (Instruções)</text>
+            <text x="149" y="531" id="svg-icache" class="b-sub-val">Hits: 0 | Misses: 0 (0%)</text>
+          </g>
+
+          <g id="comp-DCACHE" class="bloco bloco-cache">
+            <rect x="306" y="492" width="258" height="50" rx="8" />
+            <text x="435" y="511" class="b-tit">D-Cache (Dados)</text>
+            <text x="435" y="531" id="svg-dcache" class="b-sub-val">Hits: 0 | Misses: 0 (0%)</text>
+          </g>
+
+          <g id="comp-RAM" class="bloco bloco-ram">
+            <rect x="594" y="492" width="264" height="50" rx="8" />
+            <text x="726" y="511" class="b-tit">Memória Principal (RAM)</text>
+            <text x="726" y="531" class="b-sub-val">4096 × 16 bits (Write-Through)</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Explicação limpa do ciclo -->
+      <div class="ciclo-box">
+        <div class="ciclo-topo">
+          <strong id="rastro-titulo">Pronto para iniciar</strong>
+          <span id="rastro-desc">Clique em "Passo Micro" para acompanhar os 4 subciclos.</span>
+        </div>
+        <ol id="lista-subciclos" class="lista-sub"></ol>
+      </div>
+    </section>
+
+    <!-- COLUNA LATERAL: ABAS ORGANIZADAS (1 COISA POR VEZ) -->
+    <section class="card">
+      <nav class="abas">
+        <button class="aba ativa" data-aba="aba-montador">Montador</button>
+        <button class="aba" data-aba="aba-regs">Registradores</button>
+        <button class="aba" data-aba="aba-caches">Caches</button>
+        <button class="aba" data-aba="aba-mem">Memória</button>
+        <button class="aba" data-aba="aba-rom">ROM</button>
+      </nav>
+
+      <!-- ABA 1: MONTADOR -->
+      <div id="aba-montador" class="painel-aba ativo">
+        <div class="linha-controle">
+          <label for="select-exemplo">Exemplo:</label>
+          <select id="select-exemplo"></select>
+        </div>
+
+        <textarea id="editor-asm" spellcheck="false"></textarea>
+        <button id="btn-montar" class="btn btn-primario btn-bloco">Montar e Carregar</button>
+        <div id="msg-montador" class="aviso oculto"></div>
+
+        <h3>Código de Máquina (16 bits)</h3>
+        <div class="tabela-wrap tab-media">
+          <table>
+            <thead>
+              <tr><th>End</th><th>Hex</th><th>Binário</th><th>Assembly</th></tr>
+            </thead>
+            <tbody id="tbody-listagem"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 2: REGISTRADORES -->
+      <div id="aba-regs" class="painel-aba">
+        <div class="mir-resumo">
+          <div class="mir-linha">
+            <span>MIR Atual</span>
+            <code id="mir-hex">0x00000000</code>
+          </div>
+          <code id="mir-bin" class="mir-bin"></code>
+        </div>
+
+        <div class="tabela-wrap tab-alta">
+          <table>
+            <thead>
+              <tr><th>Reg</th><th>Decimal</th><th>Hex</th><th>Binário</th></tr>
+            </thead>
+            <tbody id="tbody-regs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 3: CACHES -->
+      <div id="aba-caches" class="painel-aba">
+        <div class="linha-controle">
+          <select id="cfg-vias">
+            <option value="1" selected>Mapeamento Direto (1 via)</option>
+            <option value="2">Associativo 2-vias (LRU)</option>
+          </select>
+          <select id="cfg-conjuntos">
+            <option value="2">2 conj.</option>
+            <option value="4" selected>4 conj.</option>
+            <option value="8">8 conj.</option>
+          </select>
+          <button id="btn-cache" class="btn btn-primario">Aplicar</button>
+        </div>
+
+        <div class="cache-sec">
+          <div class="cache-topo">
+            <h3>I-Cache (Instruções)</h3>
+            <span id="icache-badge" class="pill-hit">0% hit</span>
+          </div>
+          <p id="icache-info" class="nota"></p>
+          <div class="tabela-wrap tab-curta">
+            <table>
+              <thead>
+                <tr><th>Conj</th><th>Via</th><th>V</th><th>Tag</th><th>Bloco (Hex)</th></tr>
+              </thead>
+              <tbody id="tbody-icache"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="cache-sec">
+          <div class="cache-topo">
+            <h3>D-Cache (Dados)</h3>
+            <span id="dcache-badge" class="pill-hit">0% hit</span>
+          </div>
+          <p id="dcache-info" class="nota"></p>
+          <div class="tabela-wrap tab-curta">
+            <table>
+              <thead>
+                <tr><th>Conj</th><th>Via</th><th>V</th><th>Tag</th><th>Bloco (Hex)</th></tr>
+              </thead>
+              <tbody id="tbody-dcache"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 4: MEMÓRIA -->
+      <div id="aba-mem" class="painel-aba">
+        <p class="nota">Exibindo programa, variáveis ativas e topo da pilha (SP).</p>
+        <div class="tabela-wrap tab-alta">
+          <table>
+            <thead>
+              <tr><th>End</th><th>Rótulo</th><th>Dec</th><th>Hex</th><th>Conteúdo</th></tr>
+            </thead>
+            <tbody id="tbody-mem"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 5: MICROPROGRAMA -->
+      <div id="aba-rom" class="painel-aba">
+        <p class="nota">Microprograma MIC-1 (0 a 78). Linha destacada indica o próximo MPC.</p>
+        <div class="tabela-wrap tab-alta">
+          <table>
+            <thead>
+              <tr><th>MPC</th><th>Microinstrução</th><th>Hex</th></tr>
+            </thead>
+            <tbody id="tbody-rom"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
