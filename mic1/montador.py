@@ -1,15 +1,3 @@
-"""
-Montador (Assembler) para a arquitetura MAC-1 (Tanenbaum).
-
-Suporta:
-- Todas as 23 macroinstruções MAC-1 oficiais.
-- Rótulos (ex: INICIO:, LOOP:, SOMA:).
-- Comentários com ';' ou '//' ou '#'.
-- Diretiva de dados: NOME: DATA 10  (ou .WORD 10) para declarar variáveis na memória.
-- Pseudo-instrução didática HALT (monta como JUMP para o próprio endereço, encerrando a execução).
-- Números decimais, negativos (em DATA) ou hexadecimais (0x10).
-"""
-
 from .constantes import para_u16, para_bin16, para_hex16
 
 # Instruções com operando de 12 bits (endereço x ou constante 0..4095)
