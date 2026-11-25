@@ -32,14 +32,6 @@ bash
 python3 servidor.py
 
 
-### Testes
-
-Para rodar os testes das instruções MAC-1 e das caches:
-
-bash
-python3 testes.py
-
-
 ## Estrutura do projeto
 
 - servidor.py - servidor HTTP que conecta a interface ao simulador.
@@ -57,8 +49,6 @@ python3 testes.py
 
 - Aceita as 23 macroinstruções padrão do MAC-1 (LODD, STOD, ADDD, SUBD, JPOS, JZER, JUMP, LOCO, LODL, STOL, ADDL, SUBL, JNEG, JNZE, CALL, PSHI, POPI, PUSH, POP, RETN, SWAP, INSP, DESP).
 - Rótulos terminam com : (ex: LOOP:).
-- Comentários podem usar ;, // ou #.
-- Dados iniciais na memória usam DATA (ex: NUM1: DATA 15).
 - HALT funciona como pseudo-instrução de parada (monta como JUMP para o próprio endereço).
 
 ## Integrantes
